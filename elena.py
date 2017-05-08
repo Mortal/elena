@@ -6,6 +6,8 @@ import datetime
 import json
 
 
+VERSION = '0.1'
+USER_AGENT = 'https://github.com/Mortal/elena ' + VERSION
 CHANNEL = 'darbian'
 PREFIX = 'elena'
 APP_NAME = 'elena'
@@ -27,9 +29,9 @@ def compute_diff(xs, ys, d='viewers'):
         add = set(v) - set(prev)
         rm = set(prev) - set(v)
         suffix = '' if k == d else '(%s)' % k
-        added.extend(x + suffix for x in add)
-        removed.extend(x + suffix for x in rm)
-    return sorted(added), sorted(removed)
+        added.extend(sorted(x + suffix for x in add))
+        removed.extend(sorted(x + suffix for x in rm))
+    return added, removed
 
 
 def save_response(response):
@@ -47,6 +49,7 @@ def main():
     notify2.init(APP_NAME)
 
     session = requests.Session()
+    session.headers['User-Agent'] = USER_AGENT
     url = 'https://tmi.twitch.tv/group/user/%s/chatters' % CHANNEL
     response = session.get(url).json(
         object_pairs_hook=collections.OrderedDict)
@@ -66,13 +69,13 @@ def main():
         save_response(response)
         join, leave = compute_diff(chatters, response['chatters'])
         chatters = response['chatters']
-        diffstat = '+%s-%s' % (len(join), len(leave))
-        print(datetime.datetime.now().strftime('[%Y-%m-%d %H:%M:%S]'),
-              diffstat)
+        summ = summary(chatters)
+        print(datetime.datetime.now().strftime('[%Y-%m-%d %H:%M:%S]'), summ)
         if join or leave:
             msg = '%s joined\n%s left' % (
                 ', '.join(join), ', '.join(leave))
-            n.update(summary(chatters), msg)
+            print(msg)
+            n.update(summ, msg)
             n.show()
 
 
